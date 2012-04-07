@@ -30,14 +30,16 @@ loop do
   Thread.start(socket.accept) do |conn|
     begin
       $logger.debug "Accepted connection from #{conn.peeraddr(:numeric)[3]}"
-      server = Protocols::Easy.new
-      packet = server.read(conn)
+      input = PeekableIO.new conn
+      server = Protocols.determine_protocol input
+      $logger.debug "Using protocol: #{server.class}"
+      packet = server.read(input)
       $logger.info(packet)
       if flags.include? packet[:key]
         server.send_result(conn, true)
         $lock.synchronize do
           File.open(RESULTS, 'a') do |f|
-            f.puts "#{packet[:name]}: #{packet[:key]}"
+            f.puts "#{Time.now} #{server.class} #{packet[:name]}: #{packet[:key]}"
           end
         end
       else

@@ -1,7 +1,37 @@
 require 'digest/md5'
 require 'stringio'
 
+class PeekableIO
+  # This is a hack. It takes avantage of the fact
+  # that all we use in IO is read. DO NOT USE ELSEWHERE
+  def initialize(io)
+    @io = io
+    @buffer = StringIO.new
+  end
+
+  def peek(i)
+    data = @io.read(i)
+    @buffer = StringIO.new(@buffer.string << data)
+    return data
+  end
+
+  def read(i)
+    data = @buffer.read(i)
+    return @io.read(i) unless data
+    more = i - data.length
+    data << @io.read(more) if more
+    return data
+  end
+end
+
 module Protocols
+
+  def self.determine_protocol(input)
+    type = input.peek(2).unpack('n')[0]
+    cls = [Easy, Medium].find { |cls| cls.handles(type) }
+    raise "Invalid type: #{type}" unless cls
+    return cls.new
+  end
 
   class Base
     def read_elements(conn, *elements)
@@ -38,6 +68,10 @@ module Protocols
     KEY = 42
     RESULT = 7
 
+    def self.handles(input)
+      [NAME, KEY].include? input
+    end
+
     def read(conn)
       name, key = read_elements(conn, NAME, KEY)
       if name.length > 127
@@ -68,6 +102,10 @@ module Protocols
     # Stores an MD5 hash in a type 19780 (its a hint: "MD")
     BODY = 5
     HASH = 19780
+
+    def self.handles(input)
+      [BODY, HASH].include? input
+    end
 
     def do_hash(str)
       Digest::MD5.digest(str)
