@@ -3,10 +3,12 @@ module SimpleProtocol
   # This protocol is basically just (Type, Length, Value) for each element
   # The Type and length are each 2 byte network order unsigned numbers
   # There are two elements: name and key
-  # Name is type 99 and has a max length of 127
+  # Name is type 314 and has a max length of 127
   # Key is type 42 requiring exactly 25 digits as a string
-  NAME = 99
+  # Results are type 7 and return either OK or KERNEL WHO?
+  NAME = 314
   KEY = 42
+  RESULT = 7
 
   def self.read(conn)
     name = nil, key = nil
@@ -36,5 +38,13 @@ module SimpleProtocol
       raise "Missing fields"
     end
     return { name: name, key: key }
+  end
+
+  # On success, simply send 'OK'
+  # On failure, send 'KERNEL WHO?'
+  def self.send_result(conn, success)
+    result = success ? 'OK' : 'KERNEL WHO?'
+    length = result.length
+    conn.write([RESULT, length, result].pack("n2a#{length}"))
   end
 end

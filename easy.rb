@@ -6,13 +6,22 @@ require './protocols'
 
 # Listen on this port
 PORT = 1234
+# Use INFO in normal cases, DEBUG will provide a lot of extra data if needed
 LOGLEVEL = Logger::INFO
+# File to store captures
 RESULTS = "winners.txt"
+# File to lookup flags
+FLAGS = "flags.txt"
 
 
 $logger = Logger.new(STDOUT)
 $logger.level = LOGLEVEL
 $lock = Mutex.new
+flags = []
+File.open(FLAGS) do |file|
+  flags = file.readlines.map { |s| s.strip }
+  $logger.info("Loaded #{flags.length} flags.")
+end
 server = TCPServer.new "0.0.0.0", PORT
 loop do
   Thread.start(server.accept) do |conn|
@@ -20,10 +29,15 @@ loop do
       $logger.debug "Accepted connection from #{conn.peeraddr(:numeric)[3]}"
       packet = SimpleProtocol.read(conn)
       $logger.info(packet)
-      $lock.synchronize do
-        File.open(RESULTS, 'a') do |f|
-          f.puts "#{packet[:name]}: #{packet[:key]}"
+      if flags.include? packet[:key]
+        SimpleProtocol.send_result(conn, true)
+        $lock.synchronize do
+          File.open(RESULTS, 'a') do |f|
+            f.puts "#{packet[:name]}: #{packet[:key]}"
+          end
         end
+      else
+        SimpleProtocol.send_result(conn, false)
       end
     rescue Exception => e
       $logger.fatal(e)
