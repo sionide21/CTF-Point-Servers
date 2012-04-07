@@ -30,7 +30,7 @@ loop do
   Thread.start(socket.accept) do |conn|
     begin
       $logger.debug "Accepted connection from #{conn.peeraddr(:numeric)[3]}"
-      server = Protocols::Simple.new
+      server = Protocols::Easy.new
       packet = server.read(conn)
       $logger.info(packet)
       if flags.include? packet[:key]

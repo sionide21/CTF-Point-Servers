@@ -26,7 +26,7 @@ module Protocols
     end
   end
 
-  class Simple < Base
+  class Easy < Base
     # The simple protocol
     # This protocol is basically just (Type, Length, Value) for each element
     # The Type and length are each 2 byte network order unsigned numbers
@@ -62,7 +62,7 @@ module Protocols
     end
   end
 
-  class Medium < Simple
+  class Medium < Easy
     # This protocol is an envelope for simple protocol
     # It wraps the entire simple packet in a Type 5
     # Stores an MD5 hash in a type 19780 (its a hint: "MD")
