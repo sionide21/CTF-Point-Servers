@@ -39,7 +39,7 @@ loop do
         server.send_result(conn, true)
         $lock.synchronize do
           File.open(RESULTS, 'a') do |f|
-            f.puts "#{Time.now} #{server.class} #{packet[:name]}: #{packet[:key]}"
+            f.puts "[#{Time.now.strftime "%Y-%m-%d %H:%M:%S.%3N"}] #{server.class} #{packet[:name]}: #{packet[:key]}"
           end
         end
       else
