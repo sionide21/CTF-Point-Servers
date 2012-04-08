@@ -1,34 +1,12 @@
 require 'digest/md5'
 require 'stringio'
-
-class PeekableIO
-  # This is a hack. It takes avantage of the fact
-  # that all we use in IO is read. DO NOT USE ELSEWHERE
-  def initialize(io)
-    @io = io
-    @buffer = StringIO.new
-  end
-
-  def peek(i)
-    data = @io.read(i)
-    @buffer = StringIO.new(@buffer.string << data)
-    return data
-  end
-
-  def read(i)
-    data = @buffer.read(i)
-    return @io.read(i) unless data
-    more = i - data.length
-    data << @io.read(more) if more
-    return data
-  end
-end
+require 'openssl'
 
 module Protocols
 
   def self.determine_protocol(input)
     type = input.peek(2).unpack('n')[0]
-    cls = [Easy, Medium].find { |cls| cls.handles(type) }
+    cls = [Easy, Medium, Hard].find { |cls| cls.handles(type) }
     raise "Invalid type: #{type}" unless cls
     return cls.new
   end
@@ -127,5 +105,67 @@ module Protocols
       conn.write(encode(BODY, body))
       conn.write(encode(HASH, do_hash(body)))
     end
+  end
+
+  class Hard < Medium
+    # This protocol is an enveope for medium
+    # It encrypts the entire medium packet using AES 256 CBC and stores it in a type 256
+    # It requires a 256 bit key which will be stored in type 17218 ("CB", A hint at CBC)
+    # It also requires the string "AES" which will be in type 1337, I think it would simply be too difficult otherwise
+    BODY = 256
+    KEY = 17218
+    HINT = 1337
+
+    def self.handles(input)
+      [BODY, KEY, HINT].include? input
+    end
+
+    def read(conn)
+      body, key, hint = read_elements(conn, BODY, KEY, HINT)
+      raise "Didn't send AES" unless hint == 'AES'
+      decipher = OpenSSL::Cipher::AES256.new(:CBC)
+      decipher.decrypt
+      decipher.key = key
+      @key = key
+      body = decipher.update(body) + decipher.final
+      super(StringIO.new(body))
+    end
+
+    def send_result(conn, success)
+      body = StringIO.new()
+      super(body, success)
+      body = body.string
+      cipher = OpenSSL::Cipher::AES256.new(:CBC)
+      cipher.encrypt
+      cipher.key = @key
+      body = cipher.update(body) + cipher.final
+      conn.write(encode(BODY, body))
+      conn.write(encode(HINT, 'AES'))
+      # Note we use their ky but don't send it
+      # If it gets too hard, we can start sending it
+    end
+  end
+end
+
+class PeekableIO
+  # This is a hack. It takes avantage of the fact
+  # that all we use in IO is read. DO NOT USE ELSEWHERE
+  def initialize(io)
+    @io = io
+    @buffer = StringIO.new
+  end
+
+  def peek(i)
+    data = @io.read(i)
+    @buffer = StringIO.new(@buffer.string << data)
+    return data
+  end
+
+  def read(i)
+    data = @buffer.read(i)
+    return @io.read(i) unless data
+    more = i - data.length
+    data << @io.read(more) if more
+    return data
   end
 end
