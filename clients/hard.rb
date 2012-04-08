@@ -4,14 +4,26 @@ require 'digest/md5'
 require 'openssl'
 require 'stringio'
 
-s = TCPSocket.new 'localhost', 1234
+
 
 name = "Ben's Team"
 key = '1234567890098765432112345'
 
+if ARGV.length == 3
+  name = ARGV[1]
+  key = ARGV[2]
+else
+  puts "Usage: #{$0}: <team name> <flag>\n"
+  puts "Using sample values: \"#{name}\" \"#{key}\""
+end
+
+
 def encode(type, value)
   [type, value.length, value].pack("n2a#{value.length}")
 end
+
+# Connect
+s = TCPSocket.new 'localhost', 1234
 
 # Easy Packet
 packet = encode(314, name) << encode(42, key)

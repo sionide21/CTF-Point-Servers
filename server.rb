@@ -46,7 +46,7 @@ loop do
         server.send_result(conn, false)
       end
     rescue Exception => e
-      $logger.fatal(e)
+      $logger.debug(e)
     end
     conn.close rescue nil
   end
