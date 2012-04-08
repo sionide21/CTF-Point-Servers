@@ -91,7 +91,7 @@ module Protocols
 
     def read(conn)
       body, hash = read_elements(conn, BODY, HASH)
-      $logger.debug("Check Hash: #{do_hash(hash).unpack('H32')} == #{hash.unpack('H32')}")
+      $logger.debug("Check Hash: #{do_hash(body).unpack('H32')} == #{hash.unpack('H32')}")
       if hash != do_hash(body)
         raise "Invalid Hash"
       end
