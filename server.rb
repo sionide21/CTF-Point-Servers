@@ -36,14 +36,14 @@ loop do
       packet = server.read(input)
       $logger.info(packet)
       if flags.include? packet[:key]
-        server.send_result(conn, true)
+        conn.write(server.encode_result(true))
         $lock.synchronize do
           File.open(RESULTS, 'a') do |f|
             f.puts "[#{Time.now.strftime "%Y-%m-%d %H:%M:%S.%3N"}] #{server.class} #{packet[:name]}: #{packet[:key]}"
           end
         end
       else
-        server.send_result(conn, false)
+        conn.write(server.encode_result(false))
       end
     rescue Exception => e
       $logger.debug(e)

@@ -69,8 +69,8 @@ module Protocols
 
     # On success, simply send 'OK'
     # On failure, send 'KERNEL WHO?'
-    def send_result(conn, success)
-      conn.write(encode(RESULT, success ? 'OK' : 'KERNEL WHO?'))
+    def encode_result(success)
+      return encode(RESULT, success ? 'OK' : 'KERNEL WHO?')
     end
   end
 
@@ -98,12 +98,9 @@ module Protocols
       super(StringIO.new(body))
     end
 
-    def send_result(conn, success)
-      body = StringIO.new()
-      super(body, success)
-      body = body.string
-      conn.write(encode(BODY, body))
-      conn.write(encode(HASH, do_hash(body)))
+    def encode_result(success)
+      body = super
+      return encode(BODY, body) << encode(HASH, do_hash(body))
     end
   end
 
@@ -131,17 +128,14 @@ module Protocols
       super(StringIO.new(body))
     end
 
-    def send_result(conn, success)
-      body = StringIO.new()
-      super(body, success)
-      body = body.string
+    def encode_result(success)
+      body = super
       cipher = OpenSSL::Cipher::AES256.new(:CBC)
       cipher.encrypt
       cipher.key = @key
       body = cipher.update(body) + cipher.final
-      conn.write(encode(BODY, body))
-      conn.write(encode(HINT, 'AES'))
-      # Note we use their ky but don't send it
+      return encode(BODY, body) << encode(HINT, 'AES')
+      # Note we use their key but don't send it
       # If it gets too hard, we can start sending it
     end
   end
