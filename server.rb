@@ -13,10 +13,16 @@ LOGLEVEL = Logger::INFO
 RESULTS = "winners.txt"
 # File to lookup flags
 FLAGS = "flags.txt"
+DEMO_FLAG = "1234567890098765432112345"
 
 $logger = Logger.new(STDOUT)
 $logger.level = LOGLEVEL
 $lock = Mutex.new
+
+if not File.exists? FLAGS
+  $logger.warn("Flags file #{FLAGS} not found.  Creating with sample value #{DEMO_FLAG}.")
+  File.open(FLAGS, "w") { |f| f.write(DEMO_FLAG) }
+end
 
 flags = []
 File.open(FLAGS) do |file|
