@@ -64,7 +64,7 @@ module Protocols
       if not (key and name)
         raise "Missing fields"
       end
-      return { name: name, key: key }
+      return { :name => name, :key => key }
     end
 
     # On success, simply send 'OK'
